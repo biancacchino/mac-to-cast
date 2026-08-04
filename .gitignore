@@ -1,0 +1,24 @@
+# Claude Code project instructions — local only, never committed
+CLAUDE.md
+
+# Ignore all markdown files except README
+*.md
+!README.md
+
+# Local task tracking — never committed
+tasks/
+
+# macOS
+.DS_Store
+
+# Xcode / Swift
+.build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+.swiftpm/
+*.dSYM.zip
+*.dSYM/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
