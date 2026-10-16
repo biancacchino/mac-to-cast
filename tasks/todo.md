@@ -20,7 +20,7 @@ Expected latency is about 2-5 s, which is fine for video and not for interactive
 - Swift 6 package, SwiftUI app as an executable target, macOS 14+.
 - Apple frameworks only: ScreenCaptureKit, AVFoundation, Network, SwiftUI.
   No third-party dependencies; the protobuf message is six fields, so we encode it by hand.
-- Tests: Swift Testing via `swift test` (ships with the Command Line Tools, no Xcode project).
+- Tests: Swift Testing via `swift test` (needs Xcode selected via `xcode-select`, but no Xcode project).
 - `scripts/build-app.sh` wraps the binary in a `.app` with an `Info.plist` and ad-hoc signs it.
 
 ## Workflow

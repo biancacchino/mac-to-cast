@@ -11,8 +11,8 @@ Native macOS app that casts any window to a Chromecast over local HLS.
 - `tasks/todo.md` - plan, issue list, open decisions
 
 ## Run locally
-- `swift build` / `swift test`
-- `scripts/build-app.sh && open build/MacToCast.app` (once #2 lands)
+- `swift build` / `swift test` (needs `xcode-select -p` pointing at Xcode.app; the Command Line Tools toolchain cannot find the `Testing` module)
+- `scripts/build-app.sh && open build/MacToCast.app`
 - Find Chromecasts: `dns-sd -B _googlecast._tcp`
 
 ## Stack
