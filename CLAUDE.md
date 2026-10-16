@@ -3,14 +3,16 @@
 Native macOS app that casts any window to a Chromecast over local HLS.
 
 ## Overrides
-None yet. See "Agents committing" in `tasks/todo.md`.
+- Agents may commit and push on their own `issue/<n>` branch without asking (`n` is the GitHub issue number).
+  If the worktree branch has another name, rename it first: `git branch -m issue/<n>`.
+- Still ask before opening a PR, merging, or touching any other branch.
 
 ## Repo map
 - `tasks/todo.md` - plan, issue list, open decisions
 
 ## Run locally
 - `swift build` / `swift test`
-- `scripts/build-app.sh && open build/MacToCast.app` (once issue 1 lands)
+- `scripts/build-app.sh && open build/MacToCast.app` (once #2 lands)
 - Find Chromecasts: `dns-sd -B _googlecast._tcp`
 
 ## Stack
@@ -22,6 +24,6 @@ Swift 6, SwiftUI, ScreenCaptureKit, AVFoundation, Network.framework. macOS 14+. 
 - Swift package plus `scripts/build-app.sh`, not an Xcode project.
 
 ## Conventions
-- One issue per branch (`issue-<n>`), small commits, Conventional Commits.
+- One issue per branch (`issue/<n>`), small commits, Conventional Commits, `Closes #<n>` in the PR.
 - Run `swift test` before calling anything done.
 - UI follows the design brief in `docs/design-brief.md`.
