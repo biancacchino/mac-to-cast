@@ -59,6 +59,7 @@ final class CastSession {
         switch state {
         case .ready:
             log.info("Connected")
+            lastReceived = .now  // the silence limit counts from a working connection, not from init
             send(controller.start())
             status = controller.status
             receive()
