@@ -26,7 +26,7 @@ extension CastMessage {
     init(body: ArraySlice<UInt8>) throws {
         var reader = ProtobufReader(remaining: body)
         var strings: [UInt64: String] = [:]
-        while !reader.isAtEnd {
+        while !reader.remaining.isEmpty {
             let tag = try reader.varint()
             let field = tag >> 3
             switch tag & 0x7 {
@@ -35,11 +35,10 @@ extension CastMessage {
                 if field == 5, value != 0 { throw CastMessageError.binaryPayload }
             case 2:
                 let bytes = try reader.take(reader.varint())
+                // Unknown fields may hold non-UTF-8 bytes, so only ours are decoded.
+                guard [2, 3, 4, 6].contains(field) else { continue }
                 guard let string = String(bytes: bytes, encoding: .utf8) else { throw CastMessageError.malformed }
                 strings[field] = string
-            // Unknown fixed-size fields are skipped so newer devices still work.
-            case 1: _ = try reader.take(8)
-            case 5: _ = try reader.take(4)
             default: throw CastMessageError.malformed
             }
         }
@@ -85,8 +84,6 @@ struct CastMessageDecoder {
 
 private struct ProtobufReader {
     var remaining: ArraySlice<UInt8>
-
-    var isAtEnd: Bool { remaining.isEmpty }
 
     /// Reads a base-128 varint: 7 bits per byte, low bits first, top bit set means "more bytes follow".
     mutating func varint() throws -> UInt64 {
