@@ -15,6 +15,8 @@ Native macOS app that casts any window to a Chromecast over local HLS.
 - One-time: `scripts/make-signing-identity.sh` (stable signature, so macOS keeps permissions across rebuilds)
 - `scripts/build-app.sh && open build/MacToCast.app`
 - Find Chromecasts: `dns-sd -B _googlecast._tcp`
+- App logs: `/usr/bin/log stream --info --predicate 'subsystem == "com.biancacchino.MacToCast"'`
+- Test cast (until #8): `open build/MacToCast.app --args --play-test-stream <chromecast-ip> --mute --seconds 20`. The first run must be started from your own terminal so macOS shows the Local Network prompt.
 
 ## Stack
 Swift 6, SwiftUI, ScreenCaptureKit, AVFoundation, Network.framework. macOS 14+. No third-party dependencies.
