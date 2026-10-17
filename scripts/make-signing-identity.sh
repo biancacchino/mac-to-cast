@@ -18,7 +18,7 @@ fi
 
 # A previous run that stopped before the trust step (for example, a cancelled password prompt)
 # leaves an untrusted copy; a second copy with the same name would make codesign fail as ambiguous.
-while security delete-identity -c "$NAME" "$KEYCHAIN" >/dev/null 2>&1; do :; done
+for _ in 1 2 3 4 5; do security delete-identity -c "$NAME" "$KEYCHAIN" >/dev/null 2>&1 || break; done
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
