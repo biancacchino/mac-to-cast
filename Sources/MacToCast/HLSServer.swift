@@ -8,9 +8,12 @@ private let log = Logger(subsystem: "com.biancacchino.MacToCast", category: "htt
 @MainActor
 final class HLSServer {
     static let maxConnections = 32
-    static let idleTimeout = Duration.seconds(10)
+    /// Each connection serves one request; anything still open after this is closed.
+    static let requestTimeout = Duration.seconds(10)
 
     var store: HLSStore
+    /// Addresses allowed to connect besides loopback. Empty means loopback only; #8 adds the Chromecast.
+    var allowedAddresses: Set<IPv4Address> = []
     private(set) var port: UInt16?
     private let listener: NWListener
     private var openConnections = 0
@@ -44,24 +47,47 @@ final class HLSServer {
         listener.cancel()
     }
 
+    /// Loopback, or an allowed IPv4 address (also when it arrives IPv4-mapped on the IPv6 socket).
+    nonisolated static func isAllowed(_ endpoint: NWEndpoint, allowed: Set<IPv4Address>) -> Bool {
+        guard case .hostPort(let host, _) = endpoint else { return false }
+        switch host {
+        case .ipv4(let address):
+            return address.isLoopback || allowed.contains(address)
+        case .ipv6(let address):
+            if address.isLoopback { return true }
+            guard let mapped = address.asIPv4 else { return false }
+            return mapped.isLoopback || allowed.contains(mapped)
+        default:
+            return false
+        }
+    }
+
     private func accept(_ connection: NWConnection) {
-        guard openConnections < Self.maxConnections else {
+        // Only the Chromecast (and loopback) may connect, so other LAN devices can neither read the stream
+        // nor use up the connection slots.
+        guard Self.isAllowed(connection.endpoint, allowed: allowedAddresses), openConnections < Self.maxConnections else {
             connection.cancel()
             return
         }
         openConnections += 1
+        // A client that never finishes its request would otherwise hold a slot forever.
+        let timeout = Task {
+            try? await Task.sleep(for: Self.requestTimeout)
+            if !Task.isCancelled { connection.cancel() }
+        }
         connection.stateUpdateHandler = { [weak self] state in
             MainActor.assumeIsolated {
-                if case .cancelled = state { self?.openConnections -= 1 }
+                switch state {
+                case .failed: connection.cancel()
+                case .cancelled:
+                    timeout.cancel()
+                    self?.openConnections -= 1
+                default: break
+                }
             }
         }
         connection.start(queue: .main)
         read(connection, buffered: Data())
-        Task {
-            // A client that never finishes its request would otherwise hold a slot forever.
-            try? await Task.sleep(for: Self.idleTimeout)
-            connection.cancel()
-        }
     }
 
     private func read(_ connection: NWConnection, buffered: Data) {

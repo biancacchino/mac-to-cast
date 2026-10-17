@@ -52,6 +52,9 @@ struct HTTPResponse {
             "Content-Length": String(body.count),
             "Access-Control-Allow-Origin": "*",
             "Connection": "close",
+            // Segments hold screen content: keep them out of every cache, and never let a browser guess the type.
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
         ]
     }
 
@@ -67,7 +70,6 @@ struct HTTPResponse {
         case "live.m3u8":
             guard let playlist = store.playlist else { return HTTPResponse(status: 404) }
             response = HTTPResponse(status: 200, contentType: "application/vnd.apple.mpegurl", body: Data(playlist.utf8))
-            response.headers["Cache-Control"] = "no-cache"
         case "init.mp4":
             guard let data = store.initSegment else { return HTTPResponse(status: 404) }
             response = HTTPResponse(status: 200, contentType: "video/mp4", body: data)
