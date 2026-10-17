@@ -16,6 +16,10 @@ if security find-identity -v -p codesigning | grep -q "\"$NAME\""; then
     exit 0
 fi
 
+# A previous run that stopped before the trust step (for example, a cancelled password prompt)
+# leaves an untrusted copy; a second copy with the same name would make codesign fail as ambiguous.
+while security delete-identity -c "$NAME" "$KEYCHAIN" >/dev/null 2>&1; do :; done
+
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
