@@ -2,17 +2,15 @@ import Foundation
 
 /// The live stream held in memory, served by `HLSServer` under a secret path prefix.
 struct HLSStore {
-    /// Random path prefix. The server answers anyone on the LAN with CORS open to all origins
+    /// Random path prefix (a v4 UUID). The server answers anyone on the LAN with CORS open to all origins
     /// (the Cast receiver is a web page), so only someone who knows the token can read the stream.
     let token: String
     var playlist: String?
     var initSegment: Data?
     var segments: [Int: Data] = [:]
 
-    static func randomToken() -> String {
-        var generator = SystemRandomNumberGenerator()
-        return (0..<16).map { _ in String(format: "%02x", UInt8.random(in: 0...255, using: &generator)) }.joined()
-    }
+    /// 122 random bits from the system's secure random source.
+    static func randomToken() -> String { UUID().uuidString }
 }
 
 /// Reads the request line from an HTTP/1.x request head. The bytes come from the network.
