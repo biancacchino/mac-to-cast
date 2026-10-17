@@ -25,7 +25,8 @@ struct CastDevice: Identifiable {
         self.init(instanceName: instanceName, txt: txt, endpoint: result.endpoint)
     }
 
-    /// Sorted by name; a repeated `id` keeps only the first, so a spoofed copy cannot add a second row.
+    /// Sorted by name; a repeated `id` (for example one device seen on Wi-Fi and Ethernet) collapses to one row.
+    /// This does not prove a device is genuine: anything on the LAN can copy another device's `id`.
     static func list(_ devices: [CastDevice]) -> [CastDevice] {
         var seen = Set<String>()
         return devices

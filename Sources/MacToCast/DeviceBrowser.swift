@@ -26,9 +26,14 @@ final class DeviceBrowser {
         browser.stateUpdateHandler = { [weak self] state in
             MainActor.assumeIsolated {
                 switch state {
-                case .failed(let error), .waiting(let error):
-                    log.error("Browser stopped: \(error, privacy: .public)")
+                case .waiting(let error):
+                    log.error("Browser waiting: \(error, privacy: .public)")
                     self?.errorMessage = Self.message(for: error)
+                case .failed(let error):
+                    // A failed browser never recovers (for example after mDNSResponder restarts), so start a new one.
+                    log.error("Browser failed, restarting: \(error, privacy: .public)")
+                    self?.errorMessage = Self.message(for: error)
+                    self?.restart()
                 case .ready: self?.errorMessage = nil
                 default: break
                 }
@@ -36,6 +41,15 @@ final class DeviceBrowser {
         }
         browser.start(queue: .main)
         self.browser = browser
+    }
+
+    private func restart() {
+        browser?.cancel()
+        browser = nil
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            start()
+        }
     }
 
     private static func message(for error: NWError) -> String {

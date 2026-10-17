@@ -6,7 +6,7 @@ Defaults picked in crunch mode (no checkpoints):
 - The list is rebuilt from the browser's full result set on every change, sorted by name, deduplicated by `id`.
 - A browser failure (for example Local Network access denied) shows a message instead of an empty list.
 
-- [ ] `CastDevice(instanceName:txt:endpoint:)` parsing - unit tests for normal, missing `fn`, blank `fn`, long `fn`, missing `id`
-- [ ] `DeviceBrowser` wraps `NWBrowser` for `_googlecast._tcp` - checked by running the app
-- [ ] Window lists devices, shows "Looking for Chromecasts..." while empty and the error text on failure - checked by running the app and a screenshot
-- [ ] `swift test` green; both home Chromecasts ("Living Room TV", "Living Room TV 3") appear in the app
+- [x] `CastDevice(instanceName:txt:endpoint:)` parsing - unit tests for normal, missing `fn`, blank `fn`, long `fn`, missing `id`
+- [x] `DeviceBrowser` wraps `NWBrowser` for `_googlecast._tcp` - checked by running the app
+- [x] Window lists devices, shows "Looking for Chromecasts..." while empty and the error text on failure - checked by running the app; screenshot not possible from the agent (no Screen Recording permission), left as a manual PR step
+- [x] `swift test` green; the running app logged `Found 2 Chromecasts: ["Living Room TV", "Living Room TV 3"]`
