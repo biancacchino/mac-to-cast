@@ -3,7 +3,7 @@ import Network
 
 /// A Chromecast found on the local network.
 /// TXT values come from any device on the LAN, so they are trimmed and capped before display.
-struct CastDevice: Identifiable, Hashable {
+struct CastDevice: Identifiable {
     static let maxNameLength = 64
 
     /// The TXT `id`, stable across renames. Falls back to the Bonjour instance name.
