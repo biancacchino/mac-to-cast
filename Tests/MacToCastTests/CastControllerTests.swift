@@ -61,6 +61,13 @@ let receiverStatus = #"""
     #expect(controller.status == .media("PLAYING"))
 }
 
+@Test func playbackErrorAfterLoadFails() {
+    var controller = CastController(mediaURL: mediaURL)
+    let status = #"{"type":"MEDIA_STATUS","status":[{"playerState":"IDLE","idleReason":"ERROR"}]}"#
+    _ = controller.handle(incoming(CastNamespace.media, from: "transport-1", status))
+    #expect(controller.status == .failed("The Chromecast could not play the stream"))
+}
+
 @Test func launchAndLoadErrorsFail() {
     var launch = CastController(mediaURL: mediaURL)
     _ = launch.handle(incoming(CastNamespace.receiver, #"{"type":"LAUNCH_ERROR","reason":"NOT_FOUND"}"#))

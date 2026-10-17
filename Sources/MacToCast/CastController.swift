@@ -72,7 +72,10 @@ struct CastController {
         case (CastNamespace.receiver, "LAUNCH_ERROR"):
             status = .failed("Launch failed: \(json["reason"] as? String ?? "unknown reason")")
         case (CastNamespace.media, "MEDIA_STATUS"):
-            if let state = ((json["status"] as? [[String: Any]])?.first?["playerState"]) as? String {
+            let media = (json["status"] as? [[String: Any]])?.first
+            if media?["idleReason"] as? String == "ERROR" {
+                status = .failed("The Chromecast could not play the stream")
+            } else if let state = media?["playerState"] as? String {
                 status = .media(state)
             }
         case (CastNamespace.media, "LOAD_FAILED"), (CastNamespace.media, "LOAD_CANCELLED"):

@@ -16,6 +16,9 @@ final class CastSession {
     private let connection: NWConnection
     private var heartbeat: Task<Void, Never>?
     private var stopped = false
+    private var lastReceived = ContinuousClock.now
+    /// The receiver answers our PING every 5 s, so this much silence means the link is gone.
+    static let silenceLimit = Duration.seconds(15)
 
     init(endpoint: NWEndpoint, mediaURL: String) {
         controller = CastController(mediaURL: mediaURL)
@@ -74,6 +77,7 @@ final class CastSession {
                 // After our own stop(), the connection closing is expected, not a failure.
                 guard let self, !self.stopped else { return }
                 if let data, !data.isEmpty {
+                    self.lastReceived = .now
                     do {
                         for message in try self.decoder.append(data) {
                             self.send(self.controller.handle(message))
@@ -101,7 +105,13 @@ final class CastSession {
         heartbeat = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
-                self?.send([CastController.ping()])
+                guard let self else { return }
+                // A TV that loses power or Wi-Fi often sends no TCP reset, so silence is the only signal.
+                if ContinuousClock.now - self.lastReceived > Self.silenceLimit {
+                    self.fail("The Chromecast stopped responding")
+                    return
+                }
+                self.send([CastController.ping()])
             }
         }
     }
