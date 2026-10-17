@@ -31,7 +31,7 @@ struct MacToCastApp: App {
 @MainActor
 enum TestStream {
     static func play(host: String, seconds: Int, mute: Bool) async {
-        let session = CastSession(endpoint: .hostPort(host: NWEndpoint.Host(host), port: 8009), mediaURL: CastSession.testStreamURL)
+        let session = CastSession(endpoint: .hostPort(host: NWEndpoint.Host(host), port: 8009), mediaURL: CastSession.testStreamURL, streamType: "BUFFERED")
         session.start()
         var restoreMute: Bool?
         if mute {

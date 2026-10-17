@@ -46,6 +46,7 @@ let receiverStatus = #"""
     let media = payload(sent[1])["media"] as? [String: Any]
     #expect(payload(sent[1])["type"] as? String == "LOAD")
     #expect(media?["contentId"] as? String == mediaURL)
+    #expect(media?["streamType"] as? String == "LIVE")
     #expect(controller.status == .loading)
 
     // Later RECEIVER_STATUS messages (volume changes) must not reload.

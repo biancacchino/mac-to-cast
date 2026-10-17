@@ -23,6 +23,8 @@ struct CastController {
     static let platform = "receiver-0"
 
     let mediaURL: String
+    /// `LIVE` for our own capture stream, `BUFFERED` for a fixed-length video such as the test stream.
+    let streamType: String
     private(set) var status = Status.connecting
     private var transportID: String?
     private var sessionID: String?
@@ -30,8 +32,9 @@ struct CastController {
     private(set) var volumeMuted: Bool?
     private var nextRequestID = 1
 
-    init(mediaURL: String) {
+    init(mediaURL: String, streamType: String = "LIVE") {
         self.mediaURL = mediaURL
+        self.streamType = streamType
     }
 
     mutating func start() -> [CastMessage] {
@@ -98,7 +101,7 @@ struct CastController {
         transportID = transport
         sessionID = app["sessionId"] as? String
         status = .loading
-        let media: [String: Any] = ["contentId": mediaURL, "contentType": "application/x-mpegURL", "streamType": "LIVE"]
+        let media: [String: Any] = ["contentId": mediaURL, "contentType": "application/x-mpegURL", "streamType": streamType]
         return [
             Self.message(CastNamespace.connection, to: transport, ["type": "CONNECT"]),
             Self.message(CastNamespace.media, to: transport, ["type": "LOAD", "media": media, "autoplay": true, "requestId": requestID()]),

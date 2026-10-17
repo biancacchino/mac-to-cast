@@ -20,8 +20,8 @@ final class CastSession {
     /// The receiver answers our PING every 5 s, so this much silence means the link is gone.
     static let silenceLimit = Duration.seconds(15)
 
-    init(endpoint: NWEndpoint, mediaURL: String) {
-        controller = CastController(mediaURL: mediaURL)
+    init(endpoint: NWEndpoint, mediaURL: String, streamType: String = "LIVE") {
+        controller = CastController(mediaURL: mediaURL, streamType: streamType)
         connection = NWConnection(to: endpoint, using: Self.parameters())
     }
 
@@ -80,6 +80,9 @@ final class CastSession {
                     self.lastReceived = .now
                     do {
                         for message in try self.decoder.append(data) {
+                            if message.namespace == CastNamespace.media {
+                                log.debug("Media: \(message.payload.prefix(500), privacy: .public)")
+                            }
                             self.send(self.controller.handle(message))
                         }
                     } catch {
