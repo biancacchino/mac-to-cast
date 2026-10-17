@@ -21,7 +21,7 @@ Expected latency is about 2-5 s, which is fine for video and not for interactive
 - Apple frameworks only: ScreenCaptureKit, AVFoundation, Network, SwiftUI.
   No third-party dependencies; the protobuf message is six fields, so we encode it by hand.
 - Tests: Swift Testing via `swift test` (needs Xcode selected via `xcode-select`, but no Xcode project).
-- `scripts/build-app.sh` wraps the binary in a `.app` with an `Info.plist` and ad-hoc signs it.
+- `scripts/build-app.sh` wraps the binary in a `.app` with an `Info.plist` and signs it with a local self-signed identity (ad-hoc if missing).
 
 ## Workflow
 
@@ -67,7 +67,9 @@ Expected latency is about 2-5 s, which is fine for video and not for interactive
 - **CI cost:** the repo is public, so GitHub Actions minutes are free, including macOS runners.
 - **Agents committing:** agents may commit and push on their own `issue/<n>` branch only; opening PRs and merging stays with me.
 
+- **Signing:** ad-hoc signing changed the signature on every build, so macOS forgot Local Network permission after each rebuild (#17).
+  `scripts/make-signing-identity.sh` creates a self-signed identity once; `build-app.sh` signs with it.
+
 ## Open decisions
 
-- **Signing:** ad-hoc signing may make macOS re-ask for Screen Recording permission after each rebuild.
-  If that gets annoying, create a local self-signed code-signing certificate and sign with it.
+None right now.

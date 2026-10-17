@@ -12,6 +12,7 @@ Native macOS app that casts any window to a Chromecast over local HLS.
 
 ## Run locally
 - `swift build` / `swift test` (needs `xcode-select -p` pointing at Xcode.app; the Command Line Tools toolchain cannot find the `Testing` module)
+- One-time: `scripts/make-signing-identity.sh` (stable signature, so macOS keeps permissions across rebuilds)
 - `scripts/build-app.sh && open build/MacToCast.app`
 - Find Chromecasts: `dns-sd -B _googlecast._tcp`
 
