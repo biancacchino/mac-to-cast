@@ -45,7 +45,8 @@ Expected latency is about 2-5 s, which is fine for video and not for interactive
   TLS connect (accept the device's self-signed cert), `CONNECT`, `PING`/`PONG` heartbeat, `LAUNCH CC1AD845`, `LOAD` Apple's bipbop sample HLS URL.
   Verify: the TV plays the sample video and keeps playing for 5+ minutes (heartbeat works). This proves the Cast side before any capture code.
 - [ ] **#6 Local HTTP server**
-  `NWListener` serving `GET /live.m3u8` and `/seg-<n>.m4s` from memory, 404 otherwise, bound to the LAN.
+  `NWListener` serving `/<token>/live.m3u8`, `/<token>/init.mp4`, and `/<token>/seg-<n>.m4s` from memory, 404 otherwise.
+  Only loopback and the Chromecast's address may connect; the token is a random UUID.
   Verify: unit test of request parsing; `curl -i` against a running instance returns the right headers.
 - [ ] **#7 Capture a window to live HLS**
   System picker, `SCStream` video + app audio, `AVAssetWriter` segments into a sliding-window playlist.
