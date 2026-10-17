@@ -37,23 +37,23 @@ struct CastController {
     mutating func start() -> [CastMessage] {
         status = .launching
         return [
-            message(CastNamespace.connection, to: Self.platform, ["type": "CONNECT"]),
-            message(CastNamespace.receiver, to: Self.platform, ["type": "LAUNCH", "appId": Self.defaultMediaReceiver, "requestId": requestID()]),
+            Self.message(CastNamespace.connection, to: Self.platform, ["type": "CONNECT"]),
+            Self.message(CastNamespace.receiver, to: Self.platform, ["type": "LAUNCH", "appId": Self.defaultMediaReceiver, "requestId": requestID()]),
         ]
     }
 
     /// Ends the receiver app so the TV goes back to idle.
     mutating func stop() -> [CastMessage] {
         guard let sessionID else { return [] }
-        return [message(CastNamespace.receiver, to: Self.platform, ["type": "STOP", "sessionId": sessionID, "requestId": requestID()])]
+        return [Self.message(CastNamespace.receiver, to: Self.platform, ["type": "STOP", "sessionId": sessionID, "requestId": requestID()])]
     }
 
     mutating func setMuted(_ muted: Bool) -> CastMessage {
-        message(CastNamespace.receiver, to: Self.platform, ["type": "SET_VOLUME", "volume": ["muted": muted], "requestId": requestID()])
+        Self.message(CastNamespace.receiver, to: Self.platform, ["type": "SET_VOLUME", "volume": ["muted": muted], "requestId": requestID()])
     }
 
     static func ping() -> CastMessage {
-        CastController.message(CastNamespace.heartbeat, to: platform, ["type": "PING"])
+        message(CastNamespace.heartbeat, to: platform, ["type": "PING"])
     }
 
     mutating func handle(_ incoming: CastMessage) -> [CastMessage] {
@@ -63,7 +63,7 @@ struct CastController {
 
         switch (incoming.namespace, type) {
         case (CastNamespace.heartbeat, "PING"):
-            return [message(CastNamespace.heartbeat, to: incoming.sourceID, ["type": "PONG"])]
+            return [Self.message(CastNamespace.heartbeat, to: incoming.sourceID, ["type": "PONG"])]
         case (CastNamespace.receiver, "RECEIVER_STATUS"):
             if let muted = ((json["status"] as? [String: Any])?["volume"] as? [String: Any])?["muted"] as? Bool {
                 volumeMuted = muted
@@ -97,18 +97,14 @@ struct CastController {
         status = .loading
         let media: [String: Any] = ["contentId": mediaURL, "contentType": "application/x-mpegURL", "streamType": "LIVE"]
         return [
-            message(CastNamespace.connection, to: transport, ["type": "CONNECT"]),
-            message(CastNamespace.media, to: transport, ["type": "LOAD", "media": media, "autoplay": true, "requestId": requestID()]),
+            Self.message(CastNamespace.connection, to: transport, ["type": "CONNECT"]),
+            Self.message(CastNamespace.media, to: transport, ["type": "LOAD", "media": media, "autoplay": true, "requestId": requestID()]),
         ]
     }
 
     private mutating func requestID() -> Int {
         defer { nextRequestID += 1 }
         return nextRequestID
-    }
-
-    private func message(_ namespace: String, to destination: String, _ json: [String: Any]) -> CastMessage {
-        Self.message(namespace, to: destination, json)
     }
 
     private static func message(_ namespace: String, to destination: String, _ json: [String: Any]) -> CastMessage {

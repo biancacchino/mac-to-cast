@@ -15,6 +15,7 @@ final class CastSession {
     private var decoder = CastMessageDecoder()
     private let connection: NWConnection
     private var heartbeat: Task<Void, Never>?
+    private var stopped = false
 
     init(endpoint: NWEndpoint, mediaURL: String) {
         controller = CastController(mediaURL: mediaURL)
@@ -31,6 +32,7 @@ final class CastSession {
 
     /// Stops the receiver app, then closes the connection once STOP is sent.
     func stop() {
+        stopped = true
         heartbeat?.cancel()
         let messages = controller.stop()
         let connection = connection
@@ -69,7 +71,8 @@ final class CastSession {
         // The 64 KiB read size keeps one read in line with the decoder's body cap.
         connection.receive(minimumIncompleteLength: 1, maximumLength: CastMessageDecoder.maxBodySize) { [weak self] data, _, isComplete, error in
             MainActor.assumeIsolated {
-                guard let self else { return }
+                // After our own stop(), the connection closing is expected, not a failure.
+                guard let self, !self.stopped else { return }
                 if let data, !data.isEmpty {
                     do {
                         for message in try self.decoder.append(data) {
