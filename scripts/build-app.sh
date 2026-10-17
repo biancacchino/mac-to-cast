@@ -1,5 +1,5 @@
 #!/bin/bash
-# Wraps the release binary in build/MacToCast.app and ad-hoc signs it.
+# Wraps the release binary in build/MacToCast.app and signs it.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -33,5 +33,12 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 </plist>
 PLIST
 
-codesign --force --sign - "$APP"
+# A stable identity keeps macOS permissions across rebuilds; see scripts/make-signing-identity.sh.
+IDENTITY="MacToCast Local Signing"
+if security find-identity -v -p codesigning | grep -q "\"$IDENTITY\""; then
+    codesign --force --sign "$IDENTITY" "$APP"
+else
+    echo "warning: \"$IDENTITY\" not found, ad-hoc signing (macOS will forget permissions after each rebuild)" >&2
+    codesign --force --sign - "$APP"
+fi
 echo "Built $APP"
