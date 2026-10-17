@@ -35,6 +35,8 @@ extension CastMessage {
                 if field == 5, value != 0 { throw CastMessageError.binaryPayload }
             case 2:
                 let bytes = try reader.take(reader.varint())
+                // Unknown fields may hold non-UTF-8 bytes, so only ours are decoded.
+                guard [2, 3, 4, 6].contains(field) else { continue }
                 guard let string = String(bytes: bytes, encoding: .utf8) else { throw CastMessageError.malformed }
                 strings[field] = string
             default: throw CastMessageError.malformed

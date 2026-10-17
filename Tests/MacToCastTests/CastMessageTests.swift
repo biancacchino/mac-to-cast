@@ -59,6 +59,15 @@ let pingBytes: Data = {
     #expect(try decoder.append(pingBytes + pong.framed()) == [ping, pong])
 }
 
+@Test func skipsUnknownFields() throws {
+    var bytes = pingBytes
+    bytes += [0x48, 0x01]              // unknown field 9, varint 1
+    bytes += [0x42, 0x02, 0xFF, 0xFE]  // unknown field 8, 2 bytes that are not UTF-8
+    bytes[3] = 0x5A                    // body length 84 + 6 = 90
+    var decoder = CastMessageDecoder()
+    #expect(try decoder.append(bytes) == [ping])
+}
+
 @Test func rejectsLengthOverTheCap() {
     var decoder = CastMessageDecoder()
     #expect(throws: CastMessageError.tooLarge(0x0010_0000)) {
