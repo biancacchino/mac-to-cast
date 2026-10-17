@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import Testing
 @testable import MacToCast
 
@@ -33,7 +34,8 @@ func store() -> HLSStore {
     let playlist = HTTPResponse.make(method: "GET", path: "/tok/live.m3u8", store: store())
     #expect(playlist.status == 200)
     #expect(playlist.headers["Content-Type"] == "application/vnd.apple.mpegurl")
-    #expect(playlist.headers["Cache-Control"] == "no-cache")
+    #expect(playlist.headers["Cache-Control"] == "no-store")
+    #expect(playlist.headers["X-Content-Type-Options"] == "nosniff")
     #expect(playlist.headers["Access-Control-Allow-Origin"] == "*")
     #expect(playlist.body == Data("#EXTM3U\n".utf8))
 
@@ -65,4 +67,19 @@ func store() -> HLSStore {
     #expect(text.hasPrefix("HTTP/1.1 404 Not Found\r\n"))
     #expect(text.contains("Connection: close\r\n"))
     #expect(text.contains("\r\n\r\n"))
+}
+
+@Test func onlyLoopbackAndAllowedAddressesMayConnect() {
+    let chromecast = IPv4Address("192.168.0.104")!
+    func allowed(_ host: NWEndpoint.Host) -> Bool {
+        HLSServer.isAllowed(.hostPort(host: host, port: 50000), allowed: [chromecast])
+    }
+    #expect(allowed("127.0.0.1"))
+    #expect(allowed("::1"))
+    #expect(allowed("192.168.0.104"))
+    #expect(allowed("::ffff:192.168.0.104"))
+    #expect(!allowed("192.168.0.50"))
+    #expect(!allowed("::ffff:192.168.0.50"))
+    #expect(!allowed("fe80::1"))
+    #expect(!HLSServer.isAllowed(.hostPort(host: "192.168.0.50", port: 1), allowed: []))
 }
