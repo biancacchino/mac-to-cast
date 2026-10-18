@@ -53,12 +53,13 @@ Expected latency is about 2-5 s, which is fine for video and not for interactive
   System picker, `SCStream` video + app audio, `AVAssetWriter` segments into a sliding-window playlist.
   Defaults: `tasks/issue-7.md`.
   Verify: Safari plays `http://localhost:<port>/live.m3u8` with sound while the captured window changes.
-- [ ] **#8 End to end**
+- [x] **#8 End to end**
   A menu bar app: pick a Chromecast, then a window, cast; URL uses the Mac's LAN IP taken from the Cast connection's local endpoint.
   Defaults: `tasks/issue-8.md`.
   Verify on the TV: a YouTube tab with audio, a Finder window, a code editor; note the measured latency.
 - [ ] **#9 DRM / black-frame notice**
-  If captured frames stay black for ~2 s, show "This window blocks screen capture".
+  Protected video arrives as protected frames, which the encoder cannot take: send black instead and show "This window blocks screen capture".
+  Defaults and findings: `tasks/issue-9.md`.
   Verify: cast a Netflix tab, see the notice; a dark-themed window does not trigger it.
 - [ ] **#10 Native UI pass**
   Polish the menu bar menu: icon states, wording, a way back in if the menu bar item is hidden, first-launch hint, dark mode, keyboard use.
