@@ -13,8 +13,12 @@ struct MacToCastApp: App {
 
     var body: some Scene {
         WindowGroup(AppInfo.name) {
-            DeviceListView()
-                .frame(minWidth: 400, minHeight: 300)
+            VStack(spacing: 0) {
+                DeviceListView()
+                Divider()
+                CaptureBar()
+            }
+            .frame(minWidth: 400, minHeight: 300)
         }
     }
 
@@ -68,5 +72,30 @@ struct DeviceListView: View {
             }
         }
         .task { browser.start() }
+    }
+}
+
+/// ponytail: a bare row to test capture in a browser; #8 and #10 replace it with the real flow.
+struct CaptureBar: View {
+    @State private var capture = CaptureController()
+
+    var body: some View {
+        HStack {
+            if let url = capture.localURL {
+                Text(url.absoluteString)
+                    .textSelection(.enabled)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                Button("Open in Browser") { NSWorkspace.shared.open(url) }
+                Button("Stop") { Task { await capture.stop() } }
+            } else {
+                Text(capture.errorMessage ?? "No window chosen")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Choose Window…") { capture.pickWindow() }
+            }
+        }
+        .padding()
     }
 }
