@@ -15,6 +15,8 @@ final class Caster: NSObject, SCContentSharingPickerObserver {
     private(set) var session: CastSession?
     /// Why the last cast ended, shown until the next one starts.
     private(set) var errorMessage: String?
+    /// The cast window plays protected video, which blocks screen capture, so the TV shows black.
+    private(set) var blocked = false
 
     private var server: HLSServer?
     private var capture: WindowCapture?
@@ -25,6 +27,7 @@ final class Caster: NSObject, SCContentSharingPickerObserver {
     }
 
     var statusText: String? {
+        if device != nil, blocked { return "This window blocks screen capture, so the TV shows black" }
         if let device, let session { return Self.statusText(session.status, device: device.name) }
         if let device { return "Choose a window to cast to \(device.name)" }
         return errorMessage
@@ -41,6 +44,7 @@ final class Caster: NSObject, SCContentSharingPickerObserver {
     }
 
     func cast(to device: CastDevice) {
+        log.info("Chose \(device.name, privacy: .public); opening the window picker")
         Task {
             await stop()
             self.device = device
@@ -72,6 +76,7 @@ final class Caster: NSObject, SCContentSharingPickerObserver {
     }
 
     private func stopStreaming() async {
+        blocked = false
         await session?.stop()
         session = nil
         await capture?.stop()
@@ -93,7 +98,8 @@ final class Caster: NSObject, SCContentSharingPickerObserver {
             let capture = WindowCapture(
                 filter: filter,
                 onOutput: { output in Task { @MainActor [weak self] in self?.receive(output, token: token) } },
-                onStop: { error in Task { @MainActor [weak self] in await self?.captureEnded(error, token: token) } }
+                onStop: { error in Task { @MainActor [weak self] in await self?.captureEnded(error, token: token) } },
+                onBlocked: { blocked in Task { @MainActor [weak self] in self?.windowBlocked(blocked, token: token) } }
             )
             try await capture.start()
             // Another pick or a stop came in while this one was starting; it has already replaced the token.
@@ -131,17 +137,26 @@ final class Caster: NSObject, SCContentSharingPickerObserver {
         session.start()
     }
 
+    private func windowBlocked(_ blocked: Bool, token: String) {
+        guard server?.store.token == token else { return }
+        log.info("Window blocks capture: \(blocked)")
+        self.blocked = blocked
+    }
+
     private func captureEnded(_ error: Error?, token: String) async {
         guard server?.store.token == token else { return }
-        await end(error == nil ? "Encoding failed" : "The window was closed or can't be captured")
+        // The encoder also fails on protected video if `ProtectedFrame` ever stops spotting it.
+        await end(error == nil ? "Can't encode this window. If it plays protected video, it blocks screen capture" : "The window was closed or can't be captured")
     }
 
     nonisolated func contentSharingPicker(_ picker: SCContentSharingPicker, didUpdateWith filter: SCContentFilter, for stream: SCStream?) {
+        log.info("Window picked")
         nonisolated(unsafe) let filter = filter
         Task { @MainActor in await self.start(filter) }
     }
 
     nonisolated func contentSharingPicker(_ picker: SCContentSharingPicker, didCancelFor stream: SCStream?) {
+        log.info("Window picker cancelled")
         Task { @MainActor in
             // Cancelled before anything started: drop the chosen TV.
             if self.session == nil { await self.stop() }
@@ -149,6 +164,7 @@ final class Caster: NSObject, SCContentSharingPickerObserver {
     }
 
     nonisolated func contentSharingPickerStartDidFailWithError(_ error: Error) {
+        log.error("Window picker failed: \(error.localizedDescription, privacy: .public)")
         let message = error.localizedDescription
         Task { @MainActor in await self.end(message) }
     }

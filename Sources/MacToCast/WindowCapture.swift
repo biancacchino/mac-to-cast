@@ -14,15 +14,25 @@ final class WindowCapture: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
     private let configuration = SCStreamConfiguration()
     private let segmenter: HLSSegmenter
     private let onStop: @Sendable (Error?) -> Void
+    private let onBlocked: @Sendable (Bool) -> Void
     /// Sample callbacks and the repeat timer run here, so the state below is only touched on this queue.
     private let queue = DispatchQueue(label: "com.biancacchino.MacToCast.capture")
     private var stream: SCStream?
     private var lastFrame: CMSampleBuffer?
     private var stopped = false
+    /// The window is playing protected video; its frames are replaced with `blackImage`.
+    private var blocked = false
+    private var blackImage: CVPixelBuffer?
     private var repeater: DispatchSourceTimer?
 
     /// `onOutput` gets the init segment, then each media segment. `onStop` is called once, when capture ends on its own.
-    init(filter: SCContentFilter, onOutput: @escaping @Sendable (HLSSegmenter.Output) -> Void, onStop: @escaping @Sendable (Error?) -> Void) {
+    /// `onBlocked` reports when the window starts or stops showing protected video (see `ProtectedFrame`).
+    init(
+        filter: SCContentFilter,
+        onOutput: @escaping @Sendable (HLSSegmenter.Output) -> Void,
+        onStop: @escaping @Sendable (Error?) -> Void,
+        onBlocked: @escaping @Sendable (Bool) -> Void
+    ) {
         let size = Self.pixelSize(points: filter.contentRect.size, scale: CGFloat(filter.pointPixelScale))
         configuration.width = Int(size.width)
         configuration.height = Int(size.height)
@@ -34,6 +44,7 @@ final class WindowCapture: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
         configuration.channelCount = 2
         self.filter = filter
         self.onStop = onStop
+        self.onBlocked = onBlocked
         segmenter = HLSSegmenter(width: Int(size.width), height: Int(size.height), onOutput: onOutput)
     }
 
@@ -75,8 +86,15 @@ final class WindowCapture: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
         guard !stopped else { return }
         switch type {
         case .screen:
-            guard Self.isCompleteFrame(sample) else { return }
-            appendVideo(sample)
+            guard Self.isCompleteFrame(sample), let image = sample.imageBuffer else { return }
+            let isProtected = ProtectedFrame.isProtected(image)
+            if isProtected != blocked {
+                blocked = isProtected
+                onBlocked(isProtected)
+            }
+            // The encoder fails on protected frames, which would end the cast; send black and keep the sound.
+            guard let frame = isProtected ? blackSample(timedLike: sample) : sample else { return }
+            appendVideo(frame)
         case .audio:
             segmenter.appendAudio(sample)
         default:
@@ -94,6 +112,13 @@ final class WindowCapture: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
         if let last = lastFrame, sample.presentationTimeStamp <= last.presentationTimeStamp { return }
         lastFrame = sample
         segmenter.appendVideo(sample)
+    }
+
+    private func blackSample(timedLike sample: CMSampleBuffer) -> CMSampleBuffer? {
+        if blackImage == nil { blackImage = ProtectedFrame.black(width: configuration.width, height: configuration.height) }
+        guard let blackImage, let format = try? CMVideoFormatDescription(imageBuffer: blackImage) else { return nil }
+        let timing = CMSampleTimingInfo(duration: sample.duration, presentationTimeStamp: sample.presentationTimeStamp, decodeTimeStamp: .invalid)
+        return try? CMSampleBuffer(imageBuffer: blackImage, formatDescription: format, sampleTiming: timing)
     }
 
     private func repeatLastFrame() {
