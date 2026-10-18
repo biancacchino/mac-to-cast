@@ -50,22 +50,26 @@ final class HLSServer {
     /// Loopback, or an allowed IPv4 address (also when it arrives IPv4-mapped on the IPv6 socket).
     nonisolated static func isAllowed(_ endpoint: NWEndpoint, allowed: Set<IPv4Address>) -> Bool {
         guard case .hostPort(let host, _) = endpoint else { return false }
+        let address: IPv4Address
         switch host {
-        case .ipv4(let address):
-            return address.isLoopback || allowed.contains(address)
-        case .ipv6(let address):
-            if address.isLoopback { return true }
-            guard let mapped = address.asIPv4 else { return false }
-            return mapped.isLoopback || allowed.contains(mapped)
+        case .ipv4(let v4):
+            address = v4
+        case .ipv6(let v6):
+            if v6.isLoopback { return true }
+            guard let mapped = v6.asIPv4 else { return false }
+            address = mapped
         default:
             return false
         }
+        // Compare bytes: IPv4Address equality also compares the interface, and only one side has it (192.168.0.104%en0).
+        return address.isLoopback || allowed.contains { $0.rawValue == address.rawValue }
     }
 
     private func accept(_ connection: NWConnection) {
         // Only the Chromecast (and loopback) may connect, so other LAN devices can neither read the stream
         // nor use up the connection slots.
         guard Self.isAllowed(connection.endpoint, allowed: allowedAddresses), openConnections < Self.maxConnections else {
+            log.debug("Refused \(String(describing: connection.endpoint), privacy: .public)")
             connection.cancel()
             return
         }
@@ -103,7 +107,10 @@ final class HLSServer {
                 case .tooLarge:
                     self.respond(connection, HTTPResponse(status: 431))
                 case .request(let method, let path):
-                    self.respond(connection, HTTPResponse.make(method: method, path: path, store: self.store))
+                    let response = HTTPResponse.make(method: method, path: path, store: self.store)
+                    // The path holds the token, so it stays private in the log.
+                    log.debug("\(method, privacy: .public) \(path) -> \(response.status) from \(String(describing: connection.endpoint), privacy: .public)")
+                    self.respond(connection, response)
                 }
             }
         }
