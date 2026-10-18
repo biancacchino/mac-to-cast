@@ -5,7 +5,8 @@ private let log = Logger(subsystem: "com.biancacchino.MacToCast", category: "cap
 
 /// Captures one window's video and its app's audio with ScreenCaptureKit and feeds them to an `HLSSegmenter`.
 final class WindowCapture: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
-    static let maxWidth: CGFloat = 1920
+    /// Chromecasts decode H.264 up to level 4.1, which tops out at 1080p; a larger frame fails to load.
+    static let maxSize = CGSize(width: 1920, height: 1080)
     /// ScreenCaptureKit sends no frame while the window does not change; the last one is repeated this often.
     static let repeatInterval = 0.1
 
@@ -36,12 +37,11 @@ final class WindowCapture: NSObject, SCStreamOutput, SCStreamDelegate, @unchecke
         segmenter = HLSSegmenter(width: Int(size.width), height: Int(size.height), onOutput: onOutput)
     }
 
-    /// The window's size in pixels, scaled down to `maxWidth`, rounded down to even numbers as H.264 needs.
+    /// The window's size in pixels, scaled down to fit `maxSize`, rounded down to even numbers as H.264 needs.
     static func pixelSize(points: CGSize, scale: CGFloat) -> CGSize {
         var size = CGSize(width: points.width * scale, height: points.height * scale)
-        if size.width > maxWidth {
-            size = CGSize(width: maxWidth, height: size.height * maxWidth / size.width)
-        }
+        let fit = min(1, maxSize.width / max(size.width, 1), maxSize.height / max(size.height, 1))
+        size = CGSize(width: size.width * fit, height: size.height * fit)
         func even(_ value: CGFloat) -> CGFloat { max(2, (value / 2).rounded(.down) * 2) }
         return CGSize(width: even(size.width), height: even(size.height))
     }
