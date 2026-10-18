@@ -27,29 +27,31 @@ Expected latency is about 2-5 s, which is fine for video and not for interactive
 
 - Each item below is a GitHub issue (#2-#11).
 - One Sonnet session per issue: `claude -w issue-<n> --model sonnet`.
-- The agent works on branch `issue/<n>`, commits, runs `swift test`, and pushes; I open the PR and squash-merge.
+- The agent works on branch `issue/<n>`, commits, runs `swift test`, and pushes.
+  PRs merge with a merge commit or rebase (squash is off), and only after the `test` check passes.
 - One read-only review agent at the end, before `/ship`.
 
 ## Issues
 
-- [ ] **#2 Scaffold the package and CI**
+- [x] **#2 Scaffold the package and CI**
   `Package.swift`, empty SwiftUI window, test target, `scripts/build-app.sh` (Info.plist with `NSLocalNetworkUsageDescription` and `NSBonjourServices = _googlecast._tcp`), CI running `swift build` and `swift test`.
   Verify: `swift test` passes; `scripts/build-app.sh && open build/MacToCast.app` shows a window; CI green; then `protect-main biancacchino/mac-to-cast <job>`.
-- [ ] **#3 CastV2 message framing**
+- [x] **#3 CastV2 message framing**
   Encode and decode `CastMessage` (4-byte big-endian length + protobuf fields 1-6).
   Verify: unit tests round-trip known byte sequences, including a payload over 127 bytes (multi-byte varint).
-- [ ] **#4 Discover Chromecasts**
+- [x] **#4 Discover Chromecasts**
   `NWBrowser` for `_googlecast._tcp`, friendly name from the TXT record `fn`.
   Verify: unit test for TXT parsing; app lists both Chromecasts on this network (`dns-sd -B _googlecast._tcp` shows two).
-- [ ] **#5 Cast a public test stream**
+- [x] **#5 Cast a public test stream**
   TLS connect (accept the device's self-signed cert), `CONNECT`, `PING`/`PONG` heartbeat, `LAUNCH CC1AD845`, `LOAD` Apple's bipbop sample HLS URL.
   Verify: the TV plays the sample video and keeps playing for 5+ minutes (heartbeat works). This proves the Cast side before any capture code.
-- [ ] **#6 Local HTTP server**
+- [x] **#6 Local HTTP server**
   `NWListener` serving `/<token>/live.m3u8`, `/<token>/init.mp4`, and `/<token>/seg-<n>.m4s` from memory, 404 otherwise.
   Only loopback and the Chromecast's address may connect; the token is a random UUID.
   Verify: unit test of request parsing; `curl -i` against a running instance returns the right headers.
 - [ ] **#7 Capture a window to live HLS**
   System picker, `SCStream` video + app audio, `AVAssetWriter` segments into a sliding-window playlist.
+  Defaults: `tasks/issue-7.md`.
   Verify: Safari plays `http://localhost:<port>/live.m3u8` with sound while the captured window changes.
 - [ ] **#8 End to end**
   Pick window, pick Chromecast, cast; URL uses the Mac's LAN IP taken from the Cast connection's local endpoint.
