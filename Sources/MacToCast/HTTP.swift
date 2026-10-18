@@ -8,6 +8,7 @@ struct HLSStore {
     var playlist: String?
     var initSegment: Data?
     var segments: [Int: Data] = [:]
+    var live = LivePlaylist()
 
     /// 122 random bits from the system's secure random source.
     static func randomToken() -> String { UUID().uuidString }

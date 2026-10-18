@@ -16,6 +16,7 @@ Native macOS app that casts any window to a Chromecast over local HLS.
 - `scripts/build-app.sh && open build/MacToCast.app`
 - Find Chromecasts: `dns-sd -B _googlecast._tcp`
 - App logs: `/usr/bin/log stream --info --predicate 'subsystem == "com.biancacchino.MacToCast"'`
+- Test capture (until #8): in the app, Choose Window…, then Open in Browser plays the live playlist from this Mac.
 - Test cast (until #8): `open build/MacToCast.app --args --play-test-stream <chromecast-ip> --mute --seconds 20`. The first run must be started from your own terminal so macOS shows the Local Network prompt.
 
 ## Stack
