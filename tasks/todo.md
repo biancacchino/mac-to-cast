@@ -49,18 +49,19 @@ Expected latency is about 2-5 s, which is fine for video and not for interactive
   `NWListener` serving `/<token>/live.m3u8`, `/<token>/init.mp4`, and `/<token>/seg-<n>.m4s` from memory, 404 otherwise.
   Only loopback and the Chromecast's address may connect; the token is a random UUID.
   Verify: unit test of request parsing; `curl -i` against a running instance returns the right headers.
-- [ ] **#7 Capture a window to live HLS**
+- [x] **#7 Capture a window to live HLS**
   System picker, `SCStream` video + app audio, `AVAssetWriter` segments into a sliding-window playlist.
   Defaults: `tasks/issue-7.md`.
   Verify: Safari plays `http://localhost:<port>/live.m3u8` with sound while the captured window changes.
 - [ ] **#8 End to end**
-  Pick window, pick Chromecast, cast; URL uses the Mac's LAN IP taken from the Cast connection's local endpoint.
+  A menu bar app: pick a Chromecast, then a window, cast; URL uses the Mac's LAN IP taken from the Cast connection's local endpoint.
+  Defaults: `tasks/issue-8.md`.
   Verify on the TV: a YouTube tab with audio, a Finder window, a code editor; note the measured latency.
 - [ ] **#9 DRM / black-frame notice**
   If captured frames stay black for ~2 s, show "This window blocks screen capture".
   Verify: cast a Netflix tab, see the notice; a dark-themed window does not trigger it.
 - [ ] **#10 Native UI pass**
-  Apply the design brief: sidebar of devices + content with preview, vibrancy, SF Symbols, one accent color, menu bar menus, keyboard shortcuts (Cmd+Shift+C to cast, Cmd+. to stop), dark mode checked early, resizable window.
+  Polish the menu bar menu: icon states, wording, a way back in if the menu bar item is hidden, first-launch hint, dark mode, keyboard use.
   Verify: screenshots in light and dark, keyboard-only walkthrough.
 - [ ] **#11 Review and ship**
   One read-only review agent, then `/ship` or `comprehend`.
@@ -72,6 +73,9 @@ Expected latency is about 2-5 s, which is fine for video and not for interactive
 
 - **Signing:** ad-hoc signing changed the signature on every build, so macOS forgot Local Network permission after each rebuild (#17).
   `scripts/make-signing-identity.sh` creates a self-signed identity once; `build-app.sh` signs with it.
+
+- **Menu bar app:** the app is a menu bar item with a plain menu, like AirPlay, not a window (#8).
+  Apple's HIG prefers a menu over a popover for menu bar extras, and a desktop widget would need an app extension, which needs an Xcode project.
 
 ## Open decisions
 

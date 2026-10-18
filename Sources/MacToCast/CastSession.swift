@@ -8,10 +8,14 @@ private let log = Logger(subsystem: "com.biancacchino.MacToCast", category: "cas
 /// One TLS connection to a Chromecast on port 8009, driving a `CastController`.
 @MainActor @Observable
 final class CastSession {
-    static let testStreamURL = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8"
+    /// Given this Mac's and the Chromecast's address on the connection, returns the stream URL to load.
+    typealias MediaURL = @MainActor (_ local: IPv4Address, _ remote: IPv4Address) -> String?
 
     private(set) var status = CastController.Status.connecting
-    private(set) var controller: CastController
+    /// Called once, when the session fails (not after `stop`).
+    var onFailure: ((String) -> Void)?
+    private var controller = CastController(mediaURL: "")
+    private let mediaURL: MediaURL
     private var decoder = CastMessageDecoder()
     private let connection: NWConnection
     private var heartbeat: Task<Void, Never>?
@@ -20,8 +24,8 @@ final class CastSession {
     /// The receiver answers our PING every 5 s, so this much silence means the link is gone.
     static let silenceLimit = Duration.seconds(15)
 
-    init(endpoint: NWEndpoint, mediaURL: String, streamType: String = "LIVE") {
-        controller = CastController(mediaURL: mediaURL, streamType: streamType)
+    init(endpoint: NWEndpoint, mediaURL: @escaping MediaURL) {
+        self.mediaURL = mediaURL
         connection = NWConnection(to: endpoint, using: Self.parameters())
     }
 
@@ -33,17 +37,24 @@ final class CastSession {
         connection.start(queue: .main)
     }
 
-    /// Stops the receiver app, then closes the connection once STOP is sent.
-    func stop() {
+    /// Stops the receiver app so the TV goes back to idle, and returns once STOP is sent.
+    func stop() async {
+        guard !stopped else { return }
         stopped = true
         heartbeat?.cancel()
         let messages = controller.stop()
+        // No receiver session yet, or the connection is already gone: nothing to tell the TV.
+        guard !messages.isEmpty, connection.state == .ready else {
+            connection.cancel()
+            return
+        }
         let connection = connection
-        connection.send(content: messages.reduce(Data()) { $0 + $1.framed() }, completion: .contentProcessed { _ in connection.cancel() })
-    }
-
-    func setMuted(_ muted: Bool) {
-        send([controller.setMuted(muted)])
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+            connection.send(content: messages.reduce(Data()) { $0 + $1.framed() }, completion: .contentProcessed { _ in
+                connection.cancel()
+                done.resume()
+            })
+        }
     }
 
     func send(_ messages: [CastMessage]) {
@@ -59,6 +70,14 @@ final class CastSession {
         switch state {
         case .ready:
             log.info("Connected")
+            guard let local = Self.ipv4(connection.currentPath?.localEndpoint),
+                  let remote = Self.ipv4(connection.currentPath?.remoteEndpoint),
+                  let url = mediaURL(local, remote)
+            else {
+                fail("Can't find this Mac's address on the network")
+                return
+            }
+            controller.mediaURL = url
             lastReceived = .now  // the silence limit counts from a working connection, not from init
             send(controller.start())
             status = controller.status
@@ -121,11 +140,24 @@ final class CastSession {
     }
 
     private func fail(_ reason: String) {
+        // After stop(), a late failure must not end the cast that replaced this one.
+        if stopped { return }
         if case .failed = status { return }
         log.error("\(reason, privacy: .public)")
         status = .failed(reason)
         heartbeat?.cancel()
         connection.cancel()
+        onFailure?(reason)
+    }
+
+    /// The IPv4 address of an endpoint, also when it is IPv4-mapped IPv6.
+    nonisolated static func ipv4(_ endpoint: NWEndpoint?) -> IPv4Address? {
+        guard case .hostPort(let host, _)? = endpoint else { return nil }
+        switch host {
+        case .ipv4(let address): return address
+        case .ipv6(let address): return address.asIPv4
+        default: return nil
+        }
     }
 
     private static func parameters() -> NWParameters {
@@ -133,6 +165,14 @@ final class CastSession {
         // Chromecasts use a self-signed certificate, so the TLS chain cannot be verified.
         // ponytail: accepts any certificate; Cast device authentication (signed challenge) is the upgrade path.
         sec_protocol_options_set_verify_block(tls.securityProtocolOptions, { _, _, complete in complete(true) }, .main)
-        return NWParameters(tls: tls)
+        let parameters = NWParameters(tls: tls)
+        // The HTTP server allows the Chromecast by IPv4 address, and the TV fetches the stream from this Mac's IPv4 address.
+        (parameters.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options)?.version = .v4
+        return parameters
     }
+}
+
+extension IPv4Address {
+    /// `192.168.0.7`, without the interface suffix the debug description can carry.
+    var dotted: String { rawValue.map(String.init).joined(separator: ".") }
 }

@@ -83,3 +83,10 @@ func store() -> HLSStore {
     #expect(!allowed("fe80::1"))
     #expect(!HLSServer.isAllowed(.hostPort(host: "192.168.0.50", port: 1), allowed: []))
 }
+
+@Test func allowedAddressMatchesWhateverInterfaceItCameWith() {
+    // The Cast connection reports the TV as 192.168.0.104%en0; the TV's HTTP request arrives without the interface.
+    let scoped = IPv4Address("192.168.0.104%en0")!
+    #expect(HLSServer.isAllowed(.hostPort(host: "192.168.0.104", port: 50000), allowed: [scoped]))
+    #expect(HLSServer.isAllowed(.hostPort(host: "::ffff:192.168.0.104", port: 50000), allowed: [scoped]))
+}

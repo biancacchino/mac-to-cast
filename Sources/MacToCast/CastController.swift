@@ -22,19 +22,15 @@ struct CastController {
     static let sender = "sender-0"
     static let platform = "receiver-0"
 
-    let mediaURL: String
-    /// `LIVE` for our own capture stream, `BUFFERED` for a fixed-length video such as the test stream.
-    let streamType: String
+    /// Set before the receiver app is ready; `CastSession` knows it only once connected.
+    var mediaURL: String
     private(set) var status = Status.connecting
     private var transportID: String?
     private var sessionID: String?
-    /// The receiver's mute state from the latest RECEIVER_STATUS, if any.
-    private(set) var volumeMuted: Bool?
     private var nextRequestID = 1
 
-    init(mediaURL: String, streamType: String = "LIVE") {
+    init(mediaURL: String) {
         self.mediaURL = mediaURL
-        self.streamType = streamType
     }
 
     mutating func start() -> [CastMessage] {
@@ -51,10 +47,6 @@ struct CastController {
         return [Self.message(CastNamespace.receiver, to: Self.platform, ["type": "STOP", "sessionId": sessionID, "requestId": requestID()])]
     }
 
-    mutating func setMuted(_ muted: Bool) -> CastMessage {
-        Self.message(CastNamespace.receiver, to: Self.platform, ["type": "SET_VOLUME", "volume": ["muted": muted], "requestId": requestID()])
-    }
-
     static func ping() -> CastMessage {
         message(CastNamespace.heartbeat, to: platform, ["type": "PING"])
     }
@@ -68,9 +60,6 @@ struct CastController {
         case (CastNamespace.heartbeat, "PING"):
             return [Self.message(CastNamespace.heartbeat, to: incoming.sourceID, ["type": "PONG"])]
         case (CastNamespace.receiver, "RECEIVER_STATUS"):
-            if let muted = ((json["status"] as? [String: Any])?["volume"] as? [String: Any])?["muted"] as? Bool {
-                volumeMuted = muted
-            }
             return receiverStatus(json)
         case (CastNamespace.receiver, "LAUNCH_ERROR"):
             status = .failed("Launch failed: \(json["reason"] as? String ?? "unknown reason")")
@@ -101,7 +90,11 @@ struct CastController {
         transportID = transport
         sessionID = app["sessionId"] as? String
         status = .loading
-        let media: [String: Any] = ["contentId": mediaURL, "contentType": "application/x-mpegURL", "streamType": streamType]
+        // The receiver assumes MPEG-TS segments unless told otherwise; ours are fMP4.
+        let media: [String: Any] = [
+            "contentId": mediaURL, "contentType": "application/x-mpegURL", "streamType": "LIVE",
+            "hlsSegmentFormat": "fmp4", "hlsVideoSegmentFormat": "fmp4",
+        ]
         return [
             Self.message(CastNamespace.connection, to: transport, ["type": "CONNECT"]),
             Self.message(CastNamespace.media, to: transport, ["type": "LOAD", "media": media, "autoplay": true, "requestId": requestID()]),

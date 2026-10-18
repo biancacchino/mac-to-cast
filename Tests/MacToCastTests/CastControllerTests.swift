@@ -47,6 +47,9 @@ let receiverStatus = #"""
     #expect(payload(sent[1])["type"] as? String == "LOAD")
     #expect(media?["contentId"] as? String == mediaURL)
     #expect(media?["streamType"] as? String == "LIVE")
+    // Without these the receiver expects MPEG-TS segments and never plays our fMP4 ones.
+    #expect(media?["hlsSegmentFormat"] as? String == "fmp4")
+    #expect(media?["hlsVideoSegmentFormat"] as? String == "fmp4")
     #expect(controller.status == .loading)
 
     // Later RECEIVER_STATUS messages (volume changes) must not reload.

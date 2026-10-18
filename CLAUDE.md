@@ -15,9 +15,8 @@ Native macOS app that casts any window to a Chromecast over local HLS.
 - One-time: `scripts/make-signing-identity.sh` (stable signature, so macOS keeps permissions across rebuilds)
 - `scripts/build-app.sh && open build/MacToCast.app`
 - Find Chromecasts: `dns-sd -B _googlecast._tcp`
-- App logs: `/usr/bin/log stream --info --predicate 'subsystem == "com.biancacchino.MacToCast"'`
-- Test capture (until #8): in the app, Choose Window…, then Open in Browser plays the live playlist from this Mac.
-- Test cast (until #8): `open build/MacToCast.app --args --play-test-stream <chromecast-ip> --mute --seconds 20`. The first run must be started from your own terminal so macOS shows the Local Network prompt.
+- App logs: `/usr/bin/log stream --info --predicate 'subsystem == "com.biancacchino.MacToCast"'` (`--debug` adds each HTTP request the TV makes)
+- Use it: the app lives in the menu bar (TV icon, no Dock icon). Pick a Chromecast, then a window. The first launch must be from your own terminal so macOS shows the Local Network prompt.
 
 ## Stack
 Swift 6, SwiftUI, ScreenCaptureKit, AVFoundation, Network.framework. macOS 14+. No third-party dependencies.
@@ -30,4 +29,4 @@ Swift 6, SwiftUI, ScreenCaptureKit, AVFoundation, Network.framework. macOS 14+. 
 ## Conventions
 - One issue per branch (`issue/<n>`), small commits, Conventional Commits, `Closes #<n>` in the PR.
 - Run `swift test` before calling anything done.
-- UI follows the design brief in `docs/design-brief.md`.
+- UI follows the design brief in `docs/design-brief.md`, except that the app is a menu bar app with a plain menu (decided in #8), so the window-layout parts do not apply.

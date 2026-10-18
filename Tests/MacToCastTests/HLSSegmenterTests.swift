@@ -103,9 +103,12 @@ func encode(seconds: Int) async throws -> [HLSSegmenter.Output] {
     #expect(abs(duration - 4) < 0.2, "movie duration \(duration)")
 }
 
-@Test func captureSizeIsEvenAndAtMost1920Wide() {
-    #expect(WindowCapture.pixelSize(points: CGSize(width: 800, height: 601), scale: 2) == CGSize(width: 1600, height: 1202))
-    #expect(WindowCapture.pixelSize(points: CGSize(width: 1728, height: 1117), scale: 2) == CGSize(width: 1920, height: 1240))
+@Test func captureSizeIsEvenAndFitsIn1080p() {
+    #expect(WindowCapture.pixelSize(points: CGSize(width: 800, height: 500), scale: 2) == CGSize(width: 1600, height: 1000))
+    // Tall: height limits. 1600x1202 * (1080 / 1202) = 1437.6x1080.
+    #expect(WindowCapture.pixelSize(points: CGSize(width: 800, height: 601), scale: 2) == CGSize(width: 1436, height: 1080))
+    // Wide: width limits. 3840x1600 * 0.5 = 1920x800.
+    #expect(WindowCapture.pixelSize(points: CGSize(width: 1920, height: 800), scale: 2) == CGSize(width: 1920, height: 800))
     #expect(WindowCapture.pixelSize(points: CGSize(width: 333, height: 201), scale: 1) == CGSize(width: 332, height: 200))
     #expect(WindowCapture.pixelSize(points: .zero, scale: 1) == CGSize(width: 2, height: 2))
 }
