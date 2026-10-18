@@ -86,7 +86,7 @@ final class HLSSegmenter: NSObject, AVAssetWriterDelegate, @unchecked Sendable {
         // ponytail: a sample the encoder has no room for is dropped; live video should catch up, not queue.
         guard writer.status == .writing, input.isReadyForMoreMediaData else { return }
         if !input.append(sample) {
-            log.error("Append failed: \(self.writer.error?.localizedDescription ?? "unknown", privacy: .public)")
+            log.error("Append to \(input.mediaType.rawValue, privacy: .public) failed: \(String(describing: self.writer.error), privacy: .public)")
         }
     }
 
